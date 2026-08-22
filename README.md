@@ -151,6 +151,10 @@ dependencies for career-ops and the web-ui. Then:
 
 ## Daily workflow
 
+> **One command:** `.\pipeline\daily.ps1` runs steps 2, 3, 7, and 8 below in sequence
+> (import scored jobs → outreach worksheets → follow-ups → funnel). Every step degrades
+> cleanly, so it's safe to run even before you have data. The manual steps are:
+
 1. **Search** — in JobOps (`:3005`), run searches across boards for your locations. It
    scores and tailors as it goes.
 2. **Bridge the winners** into career-ops:
@@ -207,6 +211,7 @@ integrations (Reactive Resume, Adzuna API, Gmail OAuth) are commented in
 | Command | What it does |
 |---------|--------------|
 | `.\bootstrap.ps1` / `./bootstrap.sh` | One-time setup: create `.env` files + `npm install` |
+| `.\pipeline\daily.ps1 [-MinScore N] [-NoImport]` | **One command:** import → outreach → follow-ups → funnel |
 | `.\pipeline\start-all.ps1` | Start JobOps (if Docker up) + career-ops web-ui |
 | `.\pipeline\stop-all.ps1` | Stop the web-ui and JobOps |
 | `.\pipeline\sync.ps1 [-MinScore N] [-Status s] [-DryRun]` | Import scored JobOps jobs → career-ops |
@@ -229,6 +234,7 @@ Aman_career_assistant/
 ├─ .gitignore                # excludes node_modules, real .env, runtime data
 ├─ setup/env/                # committed .env templates (no secrets)
 ├─ pipeline/                 # the integration layer
+│  ├─ daily.mjs              # one-command orchestrator (import->outreach->followups->funnel)
 │  ├─ import-jobs.mjs        # JobOps SQLite -> career-ops pipeline.md bridge
 │  ├─ outreach.mjs           # per-job outreach worksheets (referral + cold email)
 │  ├─ ats-check.mjs          # pre-apply ATS keyword-coverage gate
