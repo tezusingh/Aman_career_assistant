@@ -161,8 +161,18 @@ dependencies for career-ops and the web-ui. Then:
    Cross-platform: `node pipeline/import-jobs.mjs --min-score 70`
 3. **Deep-work** — in the web-ui (`:4317`), run deep evaluation, find contacts, and draft
    referral / cold emails for the imported jobs.
-4. **Apply yourself**, then let JobOps' Gmail tracking update the status automatically.
-5. **Stop** everything: `.\pipeline\stop-all.ps1`
+4. **Beat the ATS** — before applying, check keyword coverage so your résumé passes filters:
+   ```powershell
+   .\pipeline\ats-check.ps1 -Jd .\career-ops\jds\some-job.txt
+   ```
+   It prints a 0–100 coverage score + the top JD keywords missing from your CV (add only
+   the ones you genuinely have).
+5. **Apply yourself**, then let JobOps' Gmail tracking update the status automatically.
+6. **Measure the funnel** to see where you're losing candidates and what to fix:
+   ```powershell
+   .\pipeline\funnel.ps1
+   ```
+7. **Stop** everything: `.\pipeline\stop-all.ps1`
 
 ---
 
@@ -191,6 +201,8 @@ integrations (Reactive Resume, Adzuna API, Gmail OAuth) are commented in
 | `.\pipeline\stop-all.ps1` | Stop the web-ui and JobOps |
 | `.\pipeline\sync.ps1 [-MinScore N] [-Status s] [-DryRun]` | Import scored JobOps jobs → career-ops |
 | `node pipeline/import-jobs.mjs --min-score 70` | Same bridge, cross-platform |
+| `.\pipeline\ats-check.ps1 -Jd <file>` / `-JdText "..."` | Pre-apply ATS keyword-coverage score + missing terms |
+| `.\pipeline\funnel.ps1` | Search→interview funnel + conversion rates + biggest-leak diagnosis |
 | `cd job-ops; docker compose up -d` | Start JobOps alone |
 | `cd career-ops/web-ui; node server/index.mjs` | Start the web-ui alone |
 
@@ -206,9 +218,13 @@ Aman_career_assistant/
 ├─ setup/env/                # committed .env templates (no secrets)
 ├─ pipeline/                 # the integration layer
 │  ├─ import-jobs.mjs        # JobOps SQLite -> career-ops pipeline.md bridge
+│  ├─ ats-check.mjs          # pre-apply ATS keyword-coverage gate
+│  ├─ funnel.mjs             # unified search->interview funnel + diagnosis
 │  ├─ start-all.ps1          # unified launcher (Docker-optional)
 │  ├─ stop-all.ps1
-│  └─ sync.ps1               # convenience wrapper over import-jobs.mjs
+│  ├─ sync.ps1               # wrapper over import-jobs.mjs
+│  ├─ ats-check.ps1          # wrapper over ats-check.mjs
+│  └─ funnel.ps1             # wrapper over funnel.mjs
 ├─ job-ops/                  # JobOps (Docker app: search/score/tailor/track)
 └─ career-ops/               # career-ops engine (deep eval + outreach)
    └─ web-ui/                # career-ops browser dashboard
