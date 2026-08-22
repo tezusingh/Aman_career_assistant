@@ -159,20 +159,30 @@ dependencies for career-ops and the web-ui. Then:
    .\pipeline\sync.ps1 -MinScore 60 -DryRun  # preview without writing
    ```
    Cross-platform: `node pipeline/import-jobs.mjs --min-score 70`
-3. **Deep-work** — in the web-ui (`:4317`), run deep evaluation, find contacts, and draft
+3. **Generate outreach** for the imported jobs (referrals get interviews, not applications):
+   ```powershell
+   .\pipeline\outreach.ps1                  # per-job worksheets under career-ops/networking/outreach
+   ```
+   Each worksheet has a ready-to-send LinkedIn note + recruiter cold email + referral ask,
+   plus a "sharpen with AI" prompt for career-ops.
+4. **Deep-work** — in the web-ui (`:4317`), run deep evaluation, find contacts, and draft
    referral / cold emails for the imported jobs.
-4. **Beat the ATS** — before applying, check keyword coverage so your résumé passes filters:
+5. **Beat the ATS** — before applying, check keyword coverage so your résumé passes filters:
    ```powershell
    .\pipeline\ats-check.ps1 -Jd .\career-ops\jds\some-job.txt
    ```
    It prints a 0–100 coverage score + the top JD keywords missing from your CV (add only
    the ones you genuinely have).
-5. **Apply yourself**, then let JobOps' Gmail tracking update the status automatically.
-6. **Measure the funnel** to see where you're losing candidates and what to fix:
+6. **Apply yourself**, then let JobOps' Gmail tracking update the status automatically.
+7. **Chase replies** — most interviews are lost to silence, so nudge on time:
+   ```powershell
+   .\pipeline\followups.ps1                  # who to follow up with today / overdue
+   ```
+8. **Measure the funnel** to see where you're losing candidates and what to fix:
    ```powershell
    .\pipeline\funnel.ps1
    ```
-7. **Stop** everything: `.\pipeline\stop-all.ps1`
+9. **Stop** everything: `.\pipeline\stop-all.ps1`
 
 ---
 
@@ -201,7 +211,9 @@ integrations (Reactive Resume, Adzuna API, Gmail OAuth) are commented in
 | `.\pipeline\stop-all.ps1` | Stop the web-ui and JobOps |
 | `.\pipeline\sync.ps1 [-MinScore N] [-Status s] [-DryRun]` | Import scored JobOps jobs → career-ops |
 | `node pipeline/import-jobs.mjs --min-score 70` | Same bridge, cross-platform |
+| `.\pipeline\outreach.ps1 [-Limit N]` | Generate per-job outreach worksheets (LinkedIn + cold email + referral) |
 | `.\pipeline\ats-check.ps1 -Jd <file>` / `-JdText "..."` | Pre-apply ATS keyword-coverage score + missing terms |
+| `.\pipeline\followups.ps1` | Who to follow up with today / overdue, with the next action |
 | `.\pipeline\funnel.ps1` | Search→interview funnel + conversion rates + biggest-leak diagnosis |
 | `cd job-ops; docker compose up -d` | Start JobOps alone |
 | `cd career-ops/web-ui; node server/index.mjs` | Start the web-ui alone |
@@ -218,13 +230,12 @@ Aman_career_assistant/
 ├─ setup/env/                # committed .env templates (no secrets)
 ├─ pipeline/                 # the integration layer
 │  ├─ import-jobs.mjs        # JobOps SQLite -> career-ops pipeline.md bridge
+│  ├─ outreach.mjs           # per-job outreach worksheets (referral + cold email)
 │  ├─ ats-check.mjs          # pre-apply ATS keyword-coverage gate
+│  ├─ followups.mjs          # follow-up cadence: who to chase today
 │  ├─ funnel.mjs             # unified search->interview funnel + diagnosis
-│  ├─ start-all.ps1          # unified launcher (Docker-optional)
-│  ├─ stop-all.ps1
-│  ├─ sync.ps1               # wrapper over import-jobs.mjs
-│  ├─ ats-check.ps1          # wrapper over ats-check.mjs
-│  └─ funnel.ps1             # wrapper over funnel.mjs
+│  └─ *.ps1                  # PowerShell wrappers (start-all, stop-all, sync,
+│                            #   outreach, ats-check, followups, funnel)
 ├─ job-ops/                  # JobOps (Docker app: search/score/tailor/track)
 └─ career-ops/               # career-ops engine (deep eval + outreach)
    └─ web-ui/                # career-ops browser dashboard
@@ -256,6 +267,21 @@ Aman_career_assistant/
 
 To close a gap, add a custom **TypeScript extractor** to JobOps (see its extractor docs) —
 e.g. a Bayt or Instahyre source.
+
+### Adding an India/Dubai board extractor (do this on the Docker machine)
+
+JobOps extractors are self-contained TypeScript packages under `job-ops/extractors/<name>/`
+(`manifest.ts`, `src/run.ts`, `src/parser.ts`, `tests/`). To add e.g. **Instahyre** or **Bayt**:
+
+1. Copy an existing simple extractor as a template — `job-ops/extractors/golangjobs/` (API/HTML)
+   or `job-ops/extractors/fiveamsat/` (fetch + parse) are the clearest.
+2. Point its fetcher at the target board's search results and map fields to JobOps' job
+   shape (title, employer, location, url, description).
+3. Add a `tests/parser.test.ts` against a saved HTML fixture, then `npm test` in that package.
+4. Register it so the app discovers it, and run a search from the UI to verify rows land.
+
+This needs Docker + the live site's HTML, so it belongs on the target machine — it is
+deliberately **not** pre-built here to avoid shipping an untested scraper.
 
 ---
 
