@@ -1,0 +1,6 @@
+#!/bin/sh
+# WS7 (v1.37.0) — pre-commit AI review.
+# Deterministic floor fails-HARD (secrets / .env / .also / syntax);
+# AI layer is advisory + fail-soft. AI_REVIEW=off skips only the AI
+# layer. Never bypass with --no-verify (CLAUDE.md hard rule #7).
+exec node "$(git rev-parse --show-toplevel)/scripts/ai-precommit-review.mjs"

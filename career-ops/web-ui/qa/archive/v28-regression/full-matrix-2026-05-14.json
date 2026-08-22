@@ -1,0 +1,1194 @@
+{
+  "en": {
+    "/dashboard": [
+      "Command Center",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "Vacancy search",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "Pipeline",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "Evaluate vacancy",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "Batch evaluate",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "Deep research",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "Portfolio project advisor",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "Course / certification ad",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "Apply checklist",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "Application tracker",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "Follow-up cadence advisor",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn outreach",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "Interview prep",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "Rejection patterns",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "Reports",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "Activity log",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "CV",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "Profile",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "App settings",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "Health",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "Help",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "es": {
+    "/dashboard": [
+      "Centro de Comando",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "Búsqueda de vacantes",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "Pipeline",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "Evaluar vacante",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "Evaluación en lote",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "Investigación profunda",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "Asesor de proyecto de por",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "Asesor de cursos / certif",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "Checklist de aplicación",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "Tracker de aplicaciones",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "Asesor de cadencia de fol",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "Outreach en LinkedIn",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "Preparación de entrevista",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "Patrones de rechazo",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "Reportes",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "Registro de actividad",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "CV",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "Perfil",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "Configuración de la aplic",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "Estado",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "Ayuda",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "ja": {
+    "/dashboard": [
+      "コマンドセンター",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "求人検索",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "パイプライン",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "求人を評価",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "一括評価",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "ディープ調査",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "ポートフォリオプロジェクト相談",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "コース / 資格相談",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "応募チェックリスト",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "応募トラッカー",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "フォローアップ頻度相談",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn アウトリーチ",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "面接準備",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "不合格パターン",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "レポート",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "アクティビティログ",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "履歴書",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "プロフィール",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "アプリ設定",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "ヘルス",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "ヘルプ",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "ko": {
+    "/dashboard": [
+      "커맨드 센터",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "채용 공고 검색",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "파이프라인",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "채용 공고 평가",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "일괄 평가",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "심층 조사",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "포트폴리오 프로젝트 자문",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "코스 / 인증 자문",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "지원 체크리스트",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "지원 트래커",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "팔로업 주기 자문",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn 아웃리치",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "인터뷰 준비",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "거절 패턴",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "보고서",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "활동 로그",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "이력서",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "프로필",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "앱 설정",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "상태",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "도움말",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "pt-BR": {
+    "/dashboard": [
+      "Centro de Comando",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "Busca de vagas",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "Pipeline",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "Avaliar vaga",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "Avaliação em lote",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "Pesquisa profunda",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "Consultor de projeto de p",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "Consultor de cursos / cer",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "Checklist de aplicação",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "Tracker de aplicações",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "Consultor de cadência de ",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "Outreach no LinkedIn",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "Preparação para entrevist",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "Padrões de rejeição",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "Relatórios",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "Registro de atividade",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "CV",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "Perfil",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "Configurações da aplicaçã",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "Saúde",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "Ajuda",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "ru": {
+    "/dashboard": [
+      "Командный центр",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "Поиск вакансий",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "Pipeline",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "Оценить вакансию",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "Пакетная оценка",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "Deep research",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "Советник по портфолио-про",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "Советник по курсам / серт",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "Чек-лист отклика",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "Трекер заявок",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "Советник по cadence follo",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn outreach",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "Подготовка к интервью",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "Паттерны отказов",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "Отчёты",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "Журнал действий",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "CV",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "Профиль",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "Настройки приложения",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "Health",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "Справка",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "zh-CN": {
+    "/dashboard": [
+      "指挥中心",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "职位搜索",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "流水线",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "评估职位",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "批量评估",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "深度研究",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "作品集项目顾问",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "课程 / 认证顾问",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "申请清单",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "申请跟踪器",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "跟进节奏顾问",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn 外联",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "面试准备",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "拒信模式",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "报告",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "活动日志",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "简历",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "个人资料",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "应用设置",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "健康",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "帮助",
+      5,
+      1,
+      43,
+      0
+    ]
+  },
+  "zh-TW": {
+    "/dashboard": [
+      "指揮中心",
+      30,
+      1,
+      10,
+      0
+    ],
+    "/scan": [
+      "職位搜尋",
+      8,
+      8,
+      0,
+      0
+    ],
+    "/pipeline": [
+      "流水線",
+      2644,
+      3,
+      2144,
+      0
+    ],
+    "/evaluate": [
+      "評估職位",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/batch": [
+      "批次評估",
+      7,
+      7,
+      1,
+      0
+    ],
+    "/deep": [
+      "深度研究",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/project": [
+      "作品集專案顧問",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/training": [
+      "課程 / 認證顧問",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/apply": [
+      "申請清單",
+      6,
+      3,
+      0,
+      0
+    ],
+    "/tracker": [
+      "申請追蹤器",
+      8,
+      4,
+      0,
+      0
+    ],
+    "/followup": [
+      "跟進節奏顧問",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/contacto": [
+      "LinkedIn 外聯",
+      7,
+      5,
+      0,
+      0
+    ],
+    "/interview-prep": [
+      "面試準備",
+      7,
+      4,
+      0,
+      0
+    ],
+    "/patterns": [
+      "拒信模式",
+      7,
+      3,
+      0,
+      0
+    ],
+    "/reports": [
+      "報告",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/activity": [
+      "活動日誌",
+      18,
+      1,
+      16,
+      0
+    ],
+    "/cv": [
+      "履歷",
+      9,
+      3,
+      0,
+      0
+    ],
+    "/profile": [
+      "個人資料",
+      5,
+      1,
+      0,
+      0
+    ],
+    "/config": [
+      "應用設定",
+      9,
+      7,
+      1,
+      0
+    ],
+    "/health": [
+      "健康",
+      7,
+      1,
+      0,
+      0
+    ],
+    "/help": [
+      "說明",
+      5,
+      1,
+      43,
+      0
+    ]
+  }
+}

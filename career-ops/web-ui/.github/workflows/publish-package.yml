@@ -1,0 +1,122 @@
+name: Publish to GitHub Packages
+
+# Publishes the npm package to GitHub Packages whenever a release is
+# created. Users can then install with:
+#   npm install @fighter90/career-ops-ui --registry=https://npm.pkg.github.com
+#   # or via npx:
+#   npx @fighter90/career-ops-ui
+#
+# Requires no extra secrets — GITHUB_TOKEN is auto-provisioned by Actions
+# and has packages:write permission for the repo's package registry.
+#
+# IDEMPOTENT: npm refuses to publish over an existing version (E409).
+# That used to turn this workflow RED whenever it was re-dispatched on
+# a commit whose version was already published (e.g. a docs/ci commit
+# that — correctly — didn't bump the version). The Publish step now
+# checks the registry first and SKIPS (green, exit 0) if this exact
+# version is already there. A real version bump still publishes.
+#
+# DIST-TAG RECONCILE: a backfill / parallel publish (or an E409 skip)
+# can leave npm's `latest` dist-tag on an OLDER version, so GitHub
+# Packages shows the wrong "Latest" in its UI. A final step re-points
+# `latest` at package.json's version — but only when it is the highest
+# (semver), so re-running an old tag can never regress it.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: npm publish → npm.pkg.github.com
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          registry-url: https://npm.pkg.github.com
+          scope: '@fighter90'
+
+      - name: Verify version matches release tag
+        # Only enforce on actual release events (where GITHUB_REF_NAME is a
+        # v*.*.* tag). workflow_dispatch from main publishes whatever
+        # version package.json says — that's the maintainer's call.
+        if: github.event_name == 'release'
+        run: |
+          pkg=$(node -p "require('./package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$pkg" != "$tag" ]; then
+            echo "package.json version $pkg ≠ tag $tag — refusing to publish"
+            exit 1
+          fi
+
+      - name: Run tests before publishing
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+
+      - name: Publish (idempotent — skip if this version already on the registry)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          name=$(node -p "require('./package.json').name")
+          ver=$(node -p "require('./package.json').version")
+          if npm view "${name}@${ver}" version \
+               --registry=https://npm.pkg.github.com >/dev/null 2>&1; then
+            echo "::notice::${name}@${ver} is already published to GitHub Packages — idempotent skip (nothing to do)."
+            exit 0
+          fi
+          echo "Publishing ${name}@${ver} …"
+          # Tolerate a lost publish RACE: the release-triggered run and a manual
+          # workflow_dispatch for the same tag start together, both see "not yet
+          # published" above, and both call `npm publish` — the loser gets
+          # E409/EPUBLISHCONFLICT. That's success (the version IS on the
+          # registry), not a failure, so don't red-alarm the run.
+          out=$(npm publish 2>&1) && { echo "$out"; exit 0; }
+          echo "$out"
+          if echo "$out" | grep -qiE 'EPUBLISHCONFLICT|cannot publish over|409|already exists|previously published'; then
+            echo "::notice::${name}@${ver} was published by a concurrent run (E409) — treating as success."
+            exit 0
+          fi
+          exit 1
+
+      - name: Reconcile `latest` dist-tag (semver-guarded)
+        # A backfill or parallel publish — or an E409 idempotent skip on
+        # an already-published version — can leave npm's `latest`
+        # dist-tag pointing at an OLDER release. GitHub Packages then
+        # shows the wrong version as "Latest" in its UI even though the
+        # newest tarball is present. This step re-points `latest` at
+        # package.json's version, but ONLY if that version is strictly
+        # the highest (sort -V). So a re-run of an old tag can never
+        # regress the tag, and prereleases never become `latest`.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          name=$(node -p "require('./package.json').name")
+          ver=$(node -p "require('./package.json').version")
+          case "$ver" in
+            *-*) echo "::notice::${ver} is a prerelease — not touching latest."; exit 0;;
+          esac
+          cur=$(npm view "${name}" dist-tags.latest \
+                 --registry=https://npm.pkg.github.com 2>/dev/null || echo "0.0.0")
+          if [ "$ver" = "$cur" ]; then
+            echo "::notice::dist-tag latest already = ${ver} — nothing to do."
+            exit 0
+          fi
+          highest=$(printf '%s\n%s\n' "$cur" "$ver" | sort -V | tail -1)
+          if [ "$highest" = "$ver" ]; then
+            echo "Promoting dist-tag latest: ${cur} → ${ver}"
+            npm dist-tag add "${name}@${ver}" latest \
+              --registry=https://npm.pkg.github.com
+          else
+            echo "::notice::current latest ${cur} ≥ ${ver}; leaving dist-tag unchanged."
+          fi

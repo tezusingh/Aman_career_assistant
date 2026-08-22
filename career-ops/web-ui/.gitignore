@@ -1,0 +1,138 @@
+# ── Dependencies & build artifacts ────────────────────────────────────
+node_modules/
+dist/
+build/
+
+# ── Test / coverage output ────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+
+# ── Local-only env (NEVER commit) ─────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# ── Editor / OS noise ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.sublime-workspace
+
+# ── Logs & runtime state ──────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.pid
+*.pid.lock
+*.seed
+
+# ── Screenshots & visual artifacts (kept out of version control) ──────
+screenshots/
+
+# ── Parent-project leakage guard (career-ops files that may sit nearby) ──
+# When this repo is dropped into career-ops/web-ui, our cwd is web-ui/.
+# These files belong to the parent and must not be staged from this repo.
+data/last-scan.json
+data/applications.md
+data/pipeline.md
+data/follow-ups.md
+data/scan-history.tsv
+data/activity.jsonl
+output/
+reports/
+jds/
+interview-prep/
+
+# ── GSD / SDD scratch (per-developer, not part of the public contract) ──
+.planning/
+
+# ── Per-user agent settings — untracked: the permission allow-list
+# auto-appends every novel ad-hoc Bash command, so committing it churns
+# git every session (see CHANGELOG/loop notes). Each clone keeps its own. ──
+.claude/settings.json
+.claude/settings.local.json
+.claude/cache/
+.claude/state/
+
+# ── Claude Code memory directory (per-machine) ────────────────────────
+.claude/memory/
+
+# ── Misc ──────────────────────────────────────────────────────────────
+*.tsbuildinfo
+.eslintcache
+.parcel-cache/
+
+# ── Process / lockfile noise during dev ───────────────────────────────
+.cache/
+.tmp/
+tmp/
+*.tmp
+*.temp
+
+# ── Backup files from editors / merge conflicts ───────────────────────
+*.bak
+*.orig
+*.rej
+
+# ── Lockfiles for tooling we don't ship ───────────────────────────────
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# ── Playwright / browser test artifacts (added when E2E lands) ────────
+playwright-report/
+test-results/
+.playwright/
+trace.zip
+
+# ── Profile / heap-dump output ────────────────────────────────────────
+*.heapsnapshot
+*.cpuprofile
+
+# ── Local secrets / API keys (defense-in-depth, .env already covered) ──
+**/secrets.json
+**/credentials.json
+*.pem
+*.key
+*.crt
+
+# ── Claude / Codex / Cursor scratch directories ───────────────────────
+.cursor/
+.codex/
+.continue/
+
+# ── Live server PID / dev nohup artifacts ─────────────────────────────
+nohup.out
+.dev-server.pid
+
+# ── macOS Finder noise (expanded) ─────────────────────────────────────
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Claude Code scheduled-task state
+.claude/scheduled_tasks.lock
+
+# playwright-cli scratch (UI verification)
+.playwright-cli
+.playwright-mcp/
+
+# Claude Code skill lock (session artifact)
+skills-lock.json
+
+# landing site (site/ builds in CI only)
+site/node_modules/
+site/dist/
+site/.astro/

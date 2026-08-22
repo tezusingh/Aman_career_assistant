@@ -1,0 +1,123 @@
+name: CI
+
+# Runs the full unit + integration suite on every push and pull request.
+# A separate `e2e` job spins up Playwright for the browser walkthrough so
+# that the cheap unit suite still gives quick feedback on most PRs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit + integration (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: ['18', '20', '22']
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Run unit + integration tests
+        run: npm test
+      - name: Verify i18n coverage (every key × 16 locales)
+        # I18N-SPLIT (v1.60.0): load the per-locale tables + alias map + the
+        # assembler (i18n-dict.js) into the vm BEFORE i18n.js, exactly like
+        # the browser, so __I18N_DICT is populated and this gate is real.
+        run: node -e "const {readFileSync}=require('node:fs');const {createContext,runInContext}=require('node:vm');const langs=['en','es','pt-BR','ko','ja','ru','zh-CN','zh-TW','fr','pl','uk','da','ar','de','it','tr'];const ctx=createContext({window:{},localStorage:{getItem:()=>null,setItem:()=>{}},document:{documentElement:{lang:'en'},addEventListener:()=>{}},navigator:{language:'en'}});for(const l of langs)runInContext(readFileSync('public/js/lib/locales/i18n-dict.'+l+'.js','utf8'),ctx);runInContext(readFileSync('public/js/lib/locales/i18n-dict.aliases.js','utf8'),ctx);runInContext(readFileSync('public/js/lib/i18n-dict.js','utf8'),ctx);let s=readFileSync('public/js/lib/i18n.js','utf8').replace(/return\s*\{\s*t,\s*setLang,\s*getLang,\s*getLangs,\s*onChange\s*\};/,'return { t,setLang,getLang,getLangs,onChange,_DICT:DICT };');runInContext(s,ctx);const D=ctx.window.I18n._DICT;let miss=0;for(const k of Object.keys(D)){if(D[k]['@alias']){if(!D[D[k]['@alias']]){console.error('bad-alias',k,'->',D[k]['@alias']);miss++}continue}for(const l of langs)if(!D[k][l]){console.error('miss',k,l);miss++}}console.log('keys',Object.keys(D).length,'×',langs.length,'· missing/bad',miss);if(Object.keys(D).length<600){console.error('dict too small — split load broken');process.exit(1)}process.exit(miss?1:0)"
+      - name: i18n hygiene audit (I18N-CL4 — personal-data / parity / empty / bare-date)
+        run: npm run audit:i18n
+
+  e2e:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    needs: unit
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # The e2e suite imports `playwright` from a local node_modules. We
+      # install it into web-ui's own tree for CI even though production
+      # users get it via the parent project (FIX-C12).
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Run smoke e2e
+        run: node tests/e2e.mjs
+      - name: Run comprehensive e2e
+        run: node tests/e2e-comprehensive.mjs
+      # P-9 — browser-driven smoke harness (node --test tests/playwright-smoke.mjs).
+      # Resolves Playwright via CAREER_OPS_ROOT/node_modules in production;
+      # CI uses the local `npm install --no-save playwright` above.
+      - name: Run Playwright browser smoke
+        run: npm run test:e2e:browser
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: screenshots/
+          if-no-files-found: ignore
+
+  code-quality:
+    name: Code quality (syntax · coverage · audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # Hard gate: every tracked JS/MJS must parse. `node --check` is
+      # syntax-only (no execution), so browser files using window/document
+      # globals are fine. Catches a fat-fingered locale file or view edit
+      # before it can reach the SPA.
+      - name: Syntax-check every JS / MJS (node --check)
+        run: |
+          set -uo pipefail
+          # NUL-delimited + xargs -0 so a file with spaces can't slip past
+          # the gate (word-splitting would silently skip it). xargs exits
+          # non-zero if any `node --check` fails → the step fails.
+          echo "checking $(git ls-files '*.js' '*.mjs' | wc -l | tr -d ' ') files"
+          git ls-files -z '*.js' '*.mjs' \
+            | xargs -0 -n1 sh -c 'node --check "$1" || { echo "::error file=$1::syntax error"; exit 1; }' _
+      # Coverage floor gate (line >= 90%, branch >= 80%). Fail-soft on a
+      # parse miss so a node-version table-format change can't wedge CI;
+      # gates hard when the summary is readable. Current: ~95.7% / ~87%.
+      - name: Coverage floor (line >= 90% · branch >= 80%)
+        run: |
+          set -uo pipefail
+          npm run test:coverage > /tmp/cov.txt 2>&1 || { echo "::error::coverage run failed"; tail -20 /tmp/cov.txt; exit 1; }
+          SUMMARY=$(grep -E "all files" /tmp/cov.txt | tail -1)
+          LINE=$(echo "$SUMMARY"   | awk -F'|' '{gsub(/ /,"",$2); print $2}')
+          BRANCH=$(echo "$SUMMARY" | awk -F'|' '{gsub(/ /,"",$3); print $3}')
+          echo "coverage summary: line=${LINE:-?}  branch=${BRANCH:-?}"
+          if [ -z "$LINE" ] || [ -z "$BRANCH" ]; then
+            echo "::warning::could not parse coverage summary — skipping floor gate (advisory)"
+            exit 0
+          fi
+          awk -v l="$LINE" -v b="$BRANCH" 'BEGIN{
+            if (l+0 < 90)  { printf "::error::line coverage %s%% below 90%% floor\n", l;   exit 1 }
+            if (b+0 < 80)  { printf "::error::branch coverage %s%% below 80%% floor\n", b; exit 1 }
+            printf "coverage OK — line %s%% / branch %s%%\n", l, b
+          }'
+      # Advisory: surface known-vulnerable production deps (never blocks —
+      # the project keeps deps minimal: express, js-yaml, multer).
+      - name: npm audit (advisory)
+        run: npm audit --omit=dev || echo "::warning::npm audit reported advisories (non-blocking)"

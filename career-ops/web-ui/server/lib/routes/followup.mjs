@@ -1,0 +1,102 @@
+/**
+ * Follow-up cadence routes (v1.117.0).
+ *
+ * A companion CLI ships a full follow-up cadence engine
+ * (`followup-cadence.mjs` — parses applications.md + follow-ups.md, computes
+ * per-application urgency: urgent / overdue / waiting / cold — and
+ * `followup-seed.mjs` — pins a first follow-up date when a row turns Applied).
+ * web-ui only had the LLM `followup` mode page; the deterministic cadence data
+ * was never surfaced. These routes SHELL OUT to those scripts (the same
+ * pattern as the doctor/verify/dedup runners) instead of reimplementing the
+ * cadence math — those scripts stay the single source of truth and web-ui can't
+ * drift from them.
+ *
+ *   GET  /api/followup       → run `followup-cadence.mjs` (JSON stdout) and
+ *                              relay { available:true, metadata, entries,
+ *                              cadenceConfig }. If the script is absent
+ *                              (CI, standalone installs) → { available:false }.
+ *   POST /api/followup/seed  → explicit user action. Body {appNum} seeds one
+ *                              application, {backfill:true} seeds the whole
+ *                              tracker; optional {force:true}. Runs
+ *                              `followup-seed.mjs … --json` which writes the
+ *                              user-layer data/follow-ups.md pin directives.
+ *
+ * Fail-soft by design: a missing script, a non-zero exit, or unparseable
+ * stdout never 500s the UI — the page shows an honest "not available" note.
+ */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { PROJECT_ROOT } from '../paths.mjs';
+import { runNodeScript } from '../runner.mjs';
+import { llmRateLimit } from '../rate-limit.mjs';
+import { parseJsonStdout, isEmptyTrackerError, sanitizeDetail } from '../parent-relay.mjs';
+
+const CADENCE_SCRIPT = 'followup-cadence.mjs';
+const SEED_SCRIPT = 'followup-seed.mjs';
+const RUN_TIMEOUT_MS = 30_000;
+
+function scriptAvailable(name) {
+  return existsSync(resolve(PROJECT_ROOT, name));
+}
+
+export function registerFollowupRoutes(app) {
+  app.get('/api/followup', llmRateLimit, async (_req, res) => {
+    if (!scriptAvailable(CADENCE_SCRIPT)) {
+      res.json({ available: false, reason: 'script-not-found' });
+      return;
+    }
+    const r = await runNodeScript(CADENCE_SCRIPT, [], { timeoutMs: RUN_TIMEOUT_MS });
+    const data = parseJsonStdout(r.stdout);
+    // The script exits 1 with a STRUCTURED {error} on stdout for "no data yet"
+    // (e.g. an empty tracker). That is a healthy empty state, not a failure —
+    // relay it as available with zero entries so the board shows its honest
+    // empty message instead of "script-error". Keyed to the script's exact
+    // message (followup-cadence.mjs), NOT to shape — an unrecognized {error}
+    // must fall through to the honest script-error path, or a future script
+    // regression would be silently masked as "nothing yet".
+    if (data && isEmptyTrackerError(data.error)) {
+      res.json({ available: true, empty: true, note: data.error, metadata: {}, entries: [] });
+      return;
+    }
+    if (r.code !== 0 || !data) {
+      res.json({
+        available: false,
+        reason: r.killed ? 'timeout' : 'script-error',
+        detail: sanitizeDetail(r.stderr),
+      });
+      return;
+    }
+    res.json({ available: true, ...data });
+  });
+
+  app.post('/api/followup/seed', llmRateLimit, async (req, res) => {
+    if (!scriptAvailable(SEED_SCRIPT)) {
+      res.status(400).json({ error: 'followup-seed.mjs not found in the parent project' });
+      return;
+    }
+    const body = req.body || {};
+    const args = [];
+    if (body.backfill === true) {
+      args.push('--backfill');
+    } else {
+      const appNum = Number(body.appNum);
+      if (!Number.isInteger(appNum) || appNum <= 0 || appNum > 1_000_000) {
+        res.status(400).json({ error: 'appNum must be a positive integer (or pass backfill:true)' });
+        return;
+      }
+      args.push(String(appNum));
+    }
+    if (body.force === true) args.push('--force');
+    args.push('--json');
+    const r = await runNodeScript(SEED_SCRIPT, args, { timeoutMs: RUN_TIMEOUT_MS });
+    const data = parseJsonStdout(r.stdout);
+    if (r.code !== 0) {
+      res.status(422).json({
+        error: 'seed failed',
+        detail: (data && data.error) || sanitizeDetail(r.stderr || r.stdout),
+      });
+      return;
+    }
+    res.json({ ok: true, result: data || { raw: String(r.stdout || '').slice(0, 500) } });
+  });
+}

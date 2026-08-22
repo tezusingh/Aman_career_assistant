@@ -1,0 +1,72 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from './Header.astro';
+import Hero from './Hero.astro';
+import StatsBar from './StatsBar.astro';
+import HowItWorks from './HowItWorks.astro';
+import Features from './Features.astro';
+import ScreenshotShowcase from './ScreenshotShowcase.astro';
+import Sources from './Sources.astro';
+import Compare from './Compare.astro';
+import HelpTeaser from './HelpTeaser.astro';
+import OpenSource from './OpenSource.astro';
+import Faq from './Faq.astro';
+import FinalCta from './FinalCta.astro';
+import Footer from './Footer.astro';
+import VideoModal from './VideoModal.astro';
+import { t, type Locale } from '../i18n/locales';
+import facts from '../generated/facts.json';
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+
+// v1.174.0 (FIND-3) — the SEO description carried a hard-coded "~55" while the
+// page body counts the live registry ("~75"). Substitute the same honest,
+// registry-derived count into the meta description so Google + social previews
+// match the body and can't drift again.
+const adaptersRounded = Math.floor(facts.adapters / 5) * 5;
+const metaDesc = t(locale, 'meta.desc').replace('{adapters}', String(adaptersRounded));
+
+// JSON-LD SoftwareApplication — price 0 USD, MIT, version from package.json.
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'career-ops-ui',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'macOS, Linux, Windows (WSL)',
+  softwareVersion: facts.version,
+  description: metaDesc,
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+  license: 'https://github.com/Fighter90/career-ops-ui/blob/main/LICENSE',
+  inLanguage: ['en', 'es', 'fr', 'pt-BR', 'ko', 'ja', 'ru', 'zh-CN', 'zh-TW', 'pl', 'uk', 'da', 'ar', 'de', 'it', 'tr', 'hi'],
+  sameAs: [facts.repoUrl],
+  url: 'https://cvstart.org/',
+};
+---
+
+<Base
+  locale={locale}
+  page=""
+  title={t(locale, 'meta.title')}
+  description={metaDesc}
+  jsonLd={jsonLd}
+>
+  <Header locale={locale} page="" />
+  <main id="main">
+    <Hero locale={locale} />
+    <StatsBar locale={locale} />
+    <HowItWorks locale={locale} />
+    <Features locale={locale} />
+    <ScreenshotShowcase locale={locale} />
+    <Sources locale={locale} />
+    <Compare locale={locale} />
+    <HelpTeaser locale={locale} />
+    <OpenSource locale={locale} />
+    <Faq locale={locale} />
+    <FinalCta locale={locale} />
+  </main>
+  <Footer locale={locale} page="" />
+  <VideoModal locale={locale} />
+</Base>

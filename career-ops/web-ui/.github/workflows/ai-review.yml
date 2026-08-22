@@ -1,0 +1,284 @@
+name: AI Review (Claude Code)
+
+# ────────────────────────────────────────────────────────────────────
+# Pipeline-level AI reviewer for career-ops-ui.
+#
+# WHAT THIS IS
+#   A pipeline-level advisory AI reviewer. The repo ships **direct to
+#   main** — every release is a direct commit, never a PR (zero PRs in
+#   the repo's history). So this is a SINGLE push→main job that, for
+#   every commit on main, reviews HEAD's diff and posts an advisory
+#   COMMIT comment. There is deliberately no pull_request job: it
+#   could never run here and would show as a permanent, misleading
+#   "Skipped" on every push. Re-add a separate PR workflow only if the
+#   project adopts a PR-based flow.
+#
+#   It mirrors, at the pipeline level, the advisory AI layer that
+#   scripts/ai-precommit-review.mjs already runs locally on commit:
+#   deterministic gates live in ci.yml (hard-fail); this job is the
+#   ADVISORY second opinion (fail-soft — never blocks a push;
+#   maintainers retain all authority).
+#
+# REVIEW PROVIDER  (one repo secret; OpenRouter is PREFERRED when both are set)
+#   OPENROUTER_API_KEY  — openrouter.ai → Keys. Cheap + fast. The model is the
+#                         OPENROUTER_REVIEW_MODEL repo VARIABLE, or a cheap
+#                         default (qwen/qwen3-coder).
+#     gh secret set OPENROUTER_API_KEY --repo Fighter90/career-ops-ui
+#     gh variable set OPENROUTER_REVIEW_MODEL --body "deepseek/deepseek-chat"  # optional
+#   ANTHROPIC_API_KEY   — console.anthropic.com → API keys. Fallback when no
+#                         OpenRouter key is present.
+#     gh secret set ANTHROPIC_API_KEY --repo Fighter90/career-ops-ui
+#   With NEITHER set the job logs a clear skip notice and exits 0 (so the
+#   pipeline stays green; the local pre-commit AI layer + ci.yml still protect
+#   every commit). The provider call lives in .github/scripts/ai-review-call.sh.
+#
+#   DATA FLOW: whichever provider is used, the (200 KB-capped) commit/PR diff is
+#   sent to that vendor and their chosen upstream for review. A conscious choice
+#   for a private repo — this repo is public, so the diff is public already.
+#
+# DESIGN NOTES
+#   • Zero extra runtime deps: the review is a direct HTTPS call to
+#     the Anthropic Messages API via curl, with the request body and
+#     response parsed by `jq` (preinstalled on ubuntu-latest). An
+#     earlier python-heredoc builder collided its stdout with the
+#     output file under the YAML block scalar and sent an empty body
+#     (HTTP 400) — jq is whitespace-agnostic and has no such hazard.
+#   • The review rubric (env REVIEW_RUBRIC below) is the same bar the
+#     local pre-commit AI layer applies.
+#   • The diff is size-capped (200 KB) so a huge release commit can't
+#     blow the model context or the API request.
+#   • Comments are written as github-actions[bot]; humans keep replying.
+# ────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main]
+  # v1.60.0 — the project adopted a PR-based flow (PRs #4+). Each path
+  # has its own job, guarded by `github.event_name`, so neither ever
+  # shows a misleading "Skipped": push→main posts a COMMIT comment;
+  # pull_request posts a PR comment reviewing the PR diff.
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write         # checkout + diff AND create commit comments
+                          # (POST /repos/:o/:r/commits/:sha/comments is
+                          # a write op under the Contents permission —
+                          # contents:read is NOT enough; caught by the
+                          # pre-commit AI reviewer).
+  pull-requests: write    # post the advisory review comment on PRs
+
+concurrency:
+  # One review per pushed commit SHA; never cancel — each main commit
+  # deserves its review.
+  group: ai-review-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  # Single source of truth for the review bar — kept in lockstep with
+  # CLAUDE.md hard rules and docs/sdd/CONVENTIONS.md.
+  REVIEW_RUBRIC: |
+    You are the pipeline reviewer for career-ops-ui (Express +
+    vanilla-JS SPA, ESM-only, no bundler). Review ONLY the supplied
+    diff against this bar. Be terse, quote file:line, skip nitpicks.
+
+      1. SECURITY (CLAUDE.md hard rules 3-5): no new inline
+         onclick / inline <script>; CSP must keep excluding
+         'unsafe-inline' & 'unsafe-eval'; every user-supplied URL
+         that gets fetched must pass isValidJobUrl() (SSRF guard);
+         all CV/markdown ingress must route through
+         stripDangerousMarkdown(); no XSS / prompt-injection
+         regressions; no secrets, tokens, or PII in code/logs.
+      2. PARENT BOUNDARY (hard rule 1): nothing outside web-ui/
+         may be edited by code. Flag any such change.
+      3. i18n: every new user-facing string goes through I18n.t()
+         AND has entries in ALL 16 locales (en, es, pt-BR, ko, ja,
+         ru, zh-CN, zh-TW, fr, pl, uk, da, ar, de, it, tr). A
+         missing locale is a BLOCKER call-out.
+      4. TESTS: every fix/feature needs >=1 CI-isolated test that
+         can't assume the parent project is present. No mocks of
+         internal collaborators.
+      5. CONVENTIONS: conventional-commit subject
+         (feat|fix|refactor|docs|test|chore|perf|ci[!]); files
+         < 400 lines target; CHANGELOG parity across all 16 locale
+         files if a release; ESM + node: builtin prefixes.
+
+    NOTE: the diff below is ordered code-first (server/, public/,
+    tests/, scripts/, .github/) THEN docs/locales, so the 200 KB cap
+    drops bulky localized CHANGELOG/README churn — which is already
+    parity-gated by CI tests — rather than the security-relevant code.
+    If a code file you'd expect is genuinely absent, say so; do not
+    assume it was hidden by truncation.
+      6. CORRECTNESS: real bugs, race conditions, unhandled
+         rejections, broken error paths, dead/unreachable code.
+
+    If everything is within the bar, reply exactly: "LGTM — no
+    blocking findings." Otherwise list findings worst-first. Do NOT
+    restate the diff or the commit message back to the author.
+
+jobs:
+  # Push→main path: reviews HEAD's diff and posts a COMMIT comment.
+  push-review:
+    name: OpenRouter review (push → main)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out (full history for the diff)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compute reviewable diff
+        id: diff
+        run: |
+          set -euo pipefail
+          BEFORE="${{ github.event.before }}"
+          SHA="${{ github.sha }}"
+          # First push to a new branch / force-push / unknown base →
+          # fall back to the commit's first parent (or empty tree).
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            BASE="$(git rev-parse "$SHA"^ 2>/dev/null || git hash-object -t tree /dev/null)"
+          else
+            BASE="$BEFORE"
+          fi
+          echo "Reviewing $BASE..$SHA"
+          # Order the diff code-first so the 200 KB cap (below) never
+          # truncates security-relevant files behind bulky localized
+          # CHANGELOG/README churn (parity-gated by CI tests anyway).
+          git diff --no-color "$BASE" "$SHA" -- server public tests scripts .github > /tmp/pr.diff || true
+          git diff --no-color "$BASE" "$SHA" -- . ':!server' ':!public' ':!tests' ':!scripts' ':!.github' >> /tmp/pr.diff || true
+          BYTES=$(wc -c < /tmp/pr.diff | tr -d ' ')
+          # Cap at 200 KB so a big release commit can't overflow the
+          # model context / API request body.
+          if [ "$BYTES" -gt 204800 ]; then
+            head -c 204800 /tmp/pr.diff > /tmp/pr.diff.cap
+            printf '\n\n[... diff truncated at 200 KB of %s for review ...]\n' "$BYTES" >> /tmp/pr.diff.cap
+            mv /tmp/pr.diff.cap /tmp/pr.diff
+          fi
+          if [ ! -s /tmp/pr.diff ]; then
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "empty=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "subject=$(git log -1 --pretty=%s "$SHA" | head -c 200)" >> "$GITHUB_OUTPUT"
+
+      - name: OpenRouter review → commit comment (fail-soft)
+        if: steps.diff.outputs.empty == 'false'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_REVIEW_MODEL: ${{ vars.OPENROUTER_REVIEW_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          SUBJECT: ${{ steps.diff.outputs.subject }}
+        run: |
+          set -uo pipefail
+          if [ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::warning::no OPENROUTER_API_KEY or ANTHROPIC_API_KEY — skipping AI review (advisory; ci.yml + pre-commit still gate main). Add one: gh secret set OPENROUTER_API_KEY"
+            exit 0
+          fi
+
+          # Build the review prompt: rubric + commit subject + code-first diff.
+          {
+            printf '%s\n\nCommit subject: %s\n\n=== DIFF ===\n' \
+              "${REVIEW_RUBRIC:-Review this diff for bugs and security.}" \
+              "${SUBJECT:-(no subject)}"
+            cat /tmp/pr.diff
+          } > /tmp/prompt.txt
+
+          # Shared caller: prefers a cheap OpenRouter model (OPENROUTER_API_KEY),
+          # falls back to the Anthropic API, and is fail-soft (prints a notice,
+          # never a non-zero exit).
+          REVIEW="$(bash .github/scripts/ai-review-call.sh /tmp/prompt.txt)"
+          if [ -z "$REVIEW" ]; then
+            echo "AI review empty (provider failed or skipped) — not posting a comment."
+            exit 0
+          fi
+
+          # Post as a commit comment (advisory). Fail-soft on any error.
+          BODY=$(printf '🤖 **AI review — advisory** (CLAUDE.md bar; ci.yml is the hard gate)\n\n%s\n\n_Posted by the AI Review workflow. Maintainers retain merge authority._' "$REVIEW")
+          if gh api -X POST "repos/${REPO}/commits/${SHA}/comments" \
+               -f body="$BODY" >/dev/null 2>&1; then
+            echo "✓ AI review posted to commit ${SHA}"
+          else
+            echo "::warning::could not post commit comment (fail-soft). Review was:"
+            echo "$REVIEW"
+          fi
+          # Echo to the job log too, so the review is visible even if
+          # the comment API is unavailable.
+          echo "----- AI REVIEW -----"
+          echo "$REVIEW"
+
+  # Pull-request path: reviews the PR diff (base..head) and posts a PR
+  # comment. Same rubric + same fail-soft curl/jq call as push-review.
+  pr-review:
+    name: OpenRouter review (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR head (full history for the diff)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Compute reviewable PR diff
+        id: diff
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          echo "Reviewing $BASE_SHA..$HEAD_SHA"
+          # Order the diff code-first so the 200 KB cap (below) never
+          # truncates security-relevant files behind bulky localized
+          # CHANGELOG/README churn (parity-gated by CI tests anyway).
+          git diff --no-color "$BASE_SHA" "$HEAD_SHA" -- server public tests scripts .github > /tmp/pr.diff || true
+          git diff --no-color "$BASE_SHA" "$HEAD_SHA" -- . ':!server' ':!public' ':!tests' ':!scripts' ':!.github' >> /tmp/pr.diff || true
+          BYTES=$(wc -c < /tmp/pr.diff | tr -d ' ')
+          if [ "$BYTES" -gt 204800 ]; then
+            head -c 204800 /tmp/pr.diff > /tmp/pr.diff.cap
+            printf '\n\n[... diff truncated at 200 KB of %s for review ...]\n' "$BYTES" >> /tmp/pr.diff.cap
+            mv /tmp/pr.diff.cap /tmp/pr.diff
+          fi
+          if [ ! -s /tmp/pr.diff ]; then echo "empty=true" >> "$GITHUB_OUTPUT"; else echo "empty=false" >> "$GITHUB_OUTPUT"; fi
+          # NOTE: the PR title is passed to the review step via `env:` (data,
+          # never interpolated into a shell `run:` body) to avoid GitHub
+          # Actions script injection from an attacker-controlled title.
+
+      - name: OpenRouter review → PR comment (fail-soft)
+        if: steps.diff.outputs.empty == 'false'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_REVIEW_MODEL: ${{ vars.OPENROUTER_REVIEW_MODEL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          # Safe: Actions sets this as an env VALUE; `"$SUBJECT"` below is
+          # plain data, not shell-evaluated (no script-injection surface).
+          SUBJECT: ${{ github.event.pull_request.title }}
+        run: |
+          set -uo pipefail
+          if [ -z "${OPENROUTER_API_KEY:-}" ] && [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+            echo "::warning::no OPENROUTER_API_KEY or ANTHROPIC_API_KEY — skipping AI review (advisory; ci.yml + pre-commit still gate). Add one: gh secret set OPENROUTER_API_KEY"
+            exit 0
+          fi
+          {
+            printf '%s\n\nPR title: %s\n\n=== DIFF ===\n' \
+              "${REVIEW_RUBRIC:-Review this diff for bugs and security.}" \
+              "${SUBJECT:-(no title)}"
+            cat /tmp/pr.diff
+          } > /tmp/prompt.txt
+          REVIEW="$(bash .github/scripts/ai-review-call.sh /tmp/prompt.txt)"
+          if [ -z "$REVIEW" ]; then echo "AI review empty (provider failed or skipped) — not posting."; exit 0; fi
+          BODY=$(printf '🤖 **AI review — advisory** (CLAUDE.md bar; ci.yml is the hard gate)\n\n%s\n\n_Posted by the AI Review workflow. Maintainers retain merge authority._' "$REVIEW")
+          if gh api -X POST "repos/${REPO}/issues/${PR_NUMBER}/comments" -f body="$BODY" >/dev/null 2>&1; then
+            echo "✓ AI review posted to PR #${PR_NUMBER}"
+          else
+            echo "::warning::could not post PR comment (fail-soft). Review was:"
+            echo "$REVIEW"
+          fi
+          echo "----- AI REVIEW -----"
+          echo "$REVIEW"

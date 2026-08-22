@@ -1,0 +1,42 @@
+# ── Dependencies ────────────────────────────────────────────────────────────
+**/node_modules/
+.pnp
+.pnp.js
+
+# ── Secrets / local env (NEVER commit real API keys) ────────────────────────
+# Real env files stay local; commit only the templates in setup/env/.
+career-ops/.env
+career-ops/web-ui/.env
+job-ops/.env
+**/.env.local
+**/.env.*.local
+
+# ── career-ops runtime data (personal, regenerated) ─────────────────────────
+career-ops/data/
+career-ops/reports/
+career-ops/output/
+career-ops/interview-prep/
+career-ops/jds/
+career-ops/networking/
+career-ops/web-ui/data/
+
+# ── JobOps runtime data (SQLite DB, uploads) ────────────────────────────────
+job-ops/data/
+job-ops/uploads/
+
+# ── Pipeline bridge logs / state ────────────────────────────────────────────
+pipeline/logs/
+
+# ── Playwright browser binaries (re-downloaded on install) ──────────────────
+**/.cache/ms-playwright/
+**/playwright-core/.local-browsers/
+
+# ── Build output ────────────────────────────────────────────────────────────
+**/dist/
+**/.next/
+**/build/
+
+# ── OS / editor cruft ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.log

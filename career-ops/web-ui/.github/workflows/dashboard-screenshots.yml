@@ -1,0 +1,138 @@
+name: Dashboard screenshots — drift check
+
+# ────────────────────────────────────────────────────────────────────
+# Advisory drift check for the 8 localized README hero PNGs.
+#
+# WHAT THIS IS
+#   When a commit on main touches a file that changes the dashboard
+#   visually, this regenerates images/dashboard-<locale>.png on CI and
+#   reports whether they would drift from what's committed.
+#
+# WHY push→main (not pull_request)
+#   This repo ships exclusively direct-to-main — it has ZERO PRs, ever
+#   (same reality that drove the ai-review.yml rewrite). A
+#   pull_request-triggered job here could never run and would show a
+#   permanent, misleading "Skipped". So this is a single push→main job
+#   (path-filtered) plus a manual workflow_dispatch.
+#
+# WHY advisory (warn, never fail)
+#   The committed PNGs are HUMAN-facing README art (README.md embeds
+#   ./images/dashboard-en.png; the 7 localized clones embed their own
+#   locale file). Their job is to look right for a reader — not to be
+#   byte-identical to a CI render. Chromium font hinting / antialiasing
+#   differs between the macOS box where a maintainer refreshes them and
+#   ubuntu-latest here, so a byte-exact `git diff` would fail red on
+#   every push even when nothing visually changed. A hard gate would
+#   therefore be exactly the misleading-red CI noise that ai-review /
+#   publish were just fixed to stop producing. Instead: regenerate,
+#   ALWAYS upload the fresh PNGs as an artifact, and emit a ::warning::
+#   (not exit 1) if they differ so a maintainer can eyeball + refresh
+#   intentionally. The job stays green.
+#
+# Tooling: scripts/capture-dashboard-screenshots.mjs (Playwright +
+# chromium). Idempotent: re-runs overwrite the existing PNGs.
+#
+# Path scope (a change to any of these can move the hero visually):
+#   - public/css/app.css            → theme tokens, layout
+#   - public/js/views/dashboard.js  → KPI tiles, quick-actions, hero
+#   - public/js/lib/i18n.js         → any locale label on /#/dashboard
+#   - public/js/lib/i18n-dict.js    → the localized strings themselves
+#   - public/index.html             → sidebar / top-bar markup
+#   - scripts/capture-dashboard-screenshots.mjs → the capture itself
+#   - this workflow file            → so edits here self-validate
+# ────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/css/*.css'
+      - 'public/js/views/dashboard.js'
+      - 'public/js/lib/i18n.js'
+      - 'public/js/lib/i18n-dict.js'
+      - 'public/js/lib/locales/**'
+      - 'public/index.html'
+      - 'scripts/capture-dashboard-screenshots.mjs'
+      - '.github/workflows/dashboard-screenshots.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # One drift check per pushed SHA; never cancel.
+  group: dashboard-screenshots-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  diff-screenshots:
+    name: regenerate + advisory diff vs committed PNGs
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install web-ui deps
+        run: npm ci
+
+      # The capture script imports playwright from the PARENT project
+      # (this repo is `web-ui/` inside `career-ops/`). On CI we don't
+      # have the parent, so install playwright locally instead.
+      - name: Install Playwright + chromium (CI-only override)
+        run: |
+          npm install --no-save playwright@1.49.0
+          npx playwright install --with-deps chromium
+
+      - name: Boot the web-ui server
+        run: |
+          # CAREER_OPS_ROOT — minimal scaffold so /api/health is green
+          # without needing the real parent repo (CLAUDE.md #2/#8).
+          mkdir -p /tmp/career-ops-fixture/{data,modes,config,reports}
+          echo "# CV" > /tmp/career-ops-fixture/cv.md
+          echo "candidate:" > /tmp/career-ops-fixture/config/profile.yml
+          echo "  full_name: T" >> /tmp/career-ops-fixture/config/profile.yml
+          echo "tracked_companies: []" > /tmp/career-ops-fixture/portals.yml
+          echo "# Applications" > /tmp/career-ops-fixture/data/applications.md
+          echo "oferta" > /tmp/career-ops-fixture/modes/oferta.md
+          CAREER_OPS_ROOT=/tmp/career-ops-fixture node server/index.mjs &
+          # Wait for :4317 to come up
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:4317/api/health >/dev/null 2>&1; then
+              echo "✓ server ready after ${i}s"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Capture dashboard PNGs
+        env:
+          CAREER_OPS_UI_URL: http://127.0.0.1:4317
+        run: node scripts/capture-dashboard-screenshots.mjs
+
+      - name: Advisory drift report (warn, never fail)
+        run: |
+          if git diff --quiet images/; then
+            echo "✓ no dashboard drift — committed PNGs match the CI render"
+          else
+            echo "::warning::Dashboard PNGs differ from the committed copies."
+            echo "::warning::This is ADVISORY. Cross-platform chromium rendering"
+            echo "::warning::makes a byte-exact match unreliable, so a difference"
+            echo "::warning::does NOT necessarily mean the UI changed. Download the"
+            echo "::warning::'dashboard-screenshots' artifact and eyeball it; if the"
+            echo "::warning::hero genuinely moved, regenerate locally and commit:"
+            echo "::warning::  node scripts/capture-dashboard-screenshots.mjs"
+            git diff --stat images/ || true
+          fi
+
+      - name: Upload regenerated screenshots (always)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-screenshots-${{ github.sha }}
+          path: images/dashboard-*.png
+          retention-days: 14

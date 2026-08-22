@@ -1,0 +1,782 @@
+/* ───────────────────────── a11y utilities (v1.17.0+) ───────────────────────── */
+/* Visually hide an element but keep it discoverable by screen readers
+   and keyboard nav. Used for input labels in the topbar searchbar etc. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* WCAG 2.4.1 — skip link. Hidden off-screen until it receives focus
+   (Tab from page load), then snaps into the top-left corner of the
+   viewport. Lets keyboard users bypass the persistent sidebar +
+   topbar to land directly on the content. */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 8px;
+  z-index: var(--z-skiplink);
+  padding: 12px 20px;
+  background: #222;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 8px 8px;
+  transition: top 120ms ease-out;
+  /* WCAG 2.5.5 target-size: 44×44 minimum for touch interactions. */
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #ff385c;
+  outline-offset: 2px;
+}
+
+/* WCAG 2.4.7 — visible focus indicators. Every interactive element
+   gets a clearly visible focus ring. The :focus-visible pseudo-class
+   keeps mouse-click focus rings off but keyboard-Tab focus rings on. */
+*:focus-visible {
+  outline: 2px solid var(--rausch, #ff385c);
+  outline-offset: 2px;
+}
+/* Managed route-change focus (see public/js/router.js): on every
+   client navigation the destination view's heading is given
+   tabindex="-1" and .focus()'d so screen readers announce the new
+   page. A tabindex="-1" element is NEVER keyboard-reachable, so the
+   brand ring above is spurious on it — Chromium's focus-visible
+   heuristic still painted it as a red box around every view's <h1>
+   (and baked that into the dashboard screenshots). Suppress the ring
+   for these programmatic targets only; genuine keyboard focus on real
+   controls keeps *:focus-visible. WAI-ARIA APG managed-focus pattern. */
+[tabindex="-1"]:focus,
+[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+/* Modal close × needs higher-contrast focus since it sits on the
+   modal-header background. */
+.modal-close:focus-visible {
+  outline: 3px solid var(--rausch, #ff385c);
+  outline-offset: 2px;
+}
+
+/* ───────────────────────── design tokens — light theme (default) ───────────────────────── */
+:root {
+  --rausch: #ff385c;          /* signature coral accent — for fills/borders, NOT text */
+  --rausch-dark: #e31c5f;
+  --rausch-text: #b80f42;     /* AA-passing variant for text on light (v1.19.0) */
+  --babu: #00a699;            /* teal accent — for fills/borders, NOT text */
+  --babu-text: #00665e;       /* AA-passing variant for text on light (v1.19.0) */
+  --arches: #fc642d;           /* warm orange */
+  --hof: #222222;              /* primary text */
+  --foggy: #717171;            /* secondary text */
+  --beach: #f7f7f7;            /* canvas */
+  --slate: #ebebeb;            /* divider / hairline */
+  --elev: #eef1f6;             /* D-3 (v1.167.0): raised surface, distinct from the --slate hairline so an elevated panel/chip separates from a bordered card */
+  --paper: #ffffff;            /* card / surface */
+  --kazan: #008a05;            /* success green — for fills/borders */
+  --kazan-text: #066507;      /* AA-passing variant for text on light (v1.19.0) */
+  --darjeeling: #ffb400;       /* warning amber — for fills/borders */
+  --darjeeling-text: #7a5800; /* AA-passing variant for text on light (v1.19.0) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .08);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, .12);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, .18);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --sidebar-w: 256px;
+  --topbar-h: 80px;
+  --transition: 180ms cubic-bezier(.2, .8, .2, 1);
+  /* D-4 (v1.171.0) — type scale (base = Inter 15px) and z-index layers. The
+     ramp names the sizes the components already use so they can migrate
+     incrementally; the z-index layers name every stacking context (values
+     preserved, so the stacking order is byte-identical). z-index is
+     theme-invariant → defined here only. */
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-md: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 22px;
+  --font-size-2xl: 28px;
+  --z-topbar: 5;
+  --z-sidebar: 10;   /* backdrop sits one below via calc(var(--z-sidebar) - 1) */
+  --z-hud: 11;
+  --z-banner: 50;    /* onboarding banner one below via calc(var(--z-banner) - 1) */
+  --z-modal: 200;
+  --z-popover: 950;
+  --z-toast: 1000;
+  --z-fab: 1150;
+  --z-drawer: 9999;
+  --z-skiplink: 10000;
+  /* v1.137.0 — alias tokens that several views referenced WITHOUT a definition
+     (`--fg`, `--panel`, `--panel-2`, `--surface-elev1`, `--line`). Undefined,
+     they silently fell back to hardcoded LIGHT/BLACK literals — so text went
+     white-on-white (#/pipeline overview chips) or black-on-black (#/stats
+     active tab) in dark mode, plus chat bubbles / two-pager chips. Aliased to
+     the real theme-aware tokens; because `--hof`/`--paper`/`--slate` are
+     re-declared in the dark blocks, these follow the theme with no per-block
+     override of their own. */
+  --fg: var(--hof);
+  --panel: var(--paper);
+  --panel-2: var(--elev);
+  --surface-elev1: var(--elev);
+  --line: var(--slate);
+  /* Semantic text/surface aliases, same story: these were referenced as text
+     colors (`--ok` the "✓ set" green, `--err`/`--danger` reds, `--muted`/`--ink`)
+     or surfaces (`--card`/`--border`) with hardcoded fallbacks that only work on
+     a light background. All are text/surface-role (no `background: var(--danger)`
+     anywhere), so aliasing to the AA-tuned theme-aware tokens is safe. */
+  --ok: var(--kazan-text);
+  --go: var(--kazan-text);
+  --err: var(--rausch-text);
+  --error: var(--rausch-text);
+  --danger: var(--rausch-text);
+  --warn: var(--darjeeling-text);
+  --muted: var(--foggy);
+  --ink: var(--hof);
+  --card: var(--paper);
+  --border: var(--slate);
+  color-scheme: light;
+}
+
+/* v1.12.0 — dark theme overlay. SPA writes data-theme="dark" on <html>
+   when the user picks the toggle (persisted to localStorage). Every
+   component below reads from var(--*) so the theme swap is one place. */
+[data-theme="dark"] {
+  --rausch: #ff5e7e;
+  --rausch-dark: #ff385c;
+  --rausch-text: #ff8aa0;   /* WCAG AA on dark surfaces (v1.19.0) */
+  --babu: #2dd4bf;
+  --babu-text: #5eead4;     /* WCAG AA on dark surfaces (v1.19.0) */
+  --arches: #fb923c;
+  --hof: #f3f4f6;
+  --foggy: #9ca3af;
+  --beach: #0f1115;
+  --slate: #2a2f3a;
+  --elev: #1e232e;
+  --paper: #161a22;
+  --kazan: #34d399;
+  --kazan-text: #6ee7b7;    /* WCAG AA on dark surfaces (v1.19.0) */
+  --darjeeling: #fbbf24;
+  --darjeeling-text: #fcd34d; /* WCAG AA on dark surfaces (v1.19.0) */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, .55);
+  --shadow-lg: 0 8px 28px rgba(0, 0, 0, .7);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --rausch: #ff5e7e;
+    --rausch-dark: #ff385c;
+    --rausch-text: #ff8aa0;
+    --babu: #2dd4bf;
+    --babu-text: #5eead4;
+    --arches: #fb923c;
+    --hof: #f3f4f6;
+    --foggy: #9ca3af;
+    --beach: #0f1115;
+    --slate: #2a2f3a;
+    --elev: #1e232e;
+    --paper: #161a22;
+    --kazan: #34d399;
+    --kazan-text: #6ee7b7;
+    --darjeeling: #fbbf24;
+    --darjeeling-text: #fcd34d;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+    --shadow-md: 0 6px 16px rgba(0, 0, 0, .55);
+    --shadow-lg: 0 8px 28px rgba(0, 0, 0, .7);
+    color-scheme: dark;
+  }
+}
+
+/* Theme toggle button in the top bar. */
+.theme-toggle {
+  background: var(--paper);
+  border: 1px solid var(--slate);
+  color: var(--hof);
+  border-radius: var(--radius-pill);
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition), border-color var(--transition);
+}
+.theme-toggle:hover {
+  border-color: var(--hof);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--paper);
+  color: var(--hof);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a { color: var(--hof); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ───────────────────────── sidebar ───────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  border-right: 1px solid var(--slate);
+  background: var(--paper);
+  padding: var(--space-5) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  z-index: var(--z-sidebar);
+  /* Allow vertical scroll when content (18 nav items + 6 group headers
+     + footer) is taller than the viewport. The footer stays at the
+     bottom on tall windows because the inner column is min-h-full. */
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+/* Hint scrollbar when needed but stay quiet on Macs that hide it. */
+.sidebar::-webkit-scrollbar { width: 8px; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--slate);
+  border-radius: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover { background: var(--foggy); }
+.sidebar { scrollbar-width: thin; scrollbar-color: var(--slate) transparent; }
+
+/* Hamburger button — visible only on small screens */
+.sidebar-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--slate);
+  border-radius: var(--radius);
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--hof);
+  flex-shrink: 0;
+}
+.sidebar-toggle:active { transform: scale(.95); }
+
+/* Dim everything-but-sidebar when open on mobile */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: calc(var(--z-sidebar) - 1);
+}
+body.sidebar-open .sidebar-backdrop { display: block; }
+
+/* Mobile breakpoint — anything narrower than a typical iPad portrait. */
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: 0 0 24px rgba(0,0,0,.18);
+  }
+  body.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .sidebar-toggle { display: inline-flex; align-items: center; justify-content: center; }
+  .main { margin-left: 0 !important; padding-left: 12px; padding-right: 12px; }
+  /* The topbar keeps ALL its controls but drops the action buttons onto their
+     own full-width second row so row one is just [☰ · search]. Height grows to
+     fit; the sticky offset follows automatically. `min-width:0` releases the
+     searchbar from the flex-item content floor so it can shrink in row one.
+
+     Why a forced second row (flex-basis:100%) and not "wrap only when it no
+     longer fits": the base `.topbar` is `justify-content: space-between`, and
+     when the single row is *almost* full (long-label locales like RU — «Открыть
+     Scan» / «Диагностика» — around 565–640px) flexbox keeps everything on one
+     line and distributes the NEGATIVE free space as overlap, so the 🔔/🌙 sit on
+     top of the search pill (user-reported, v1.208.2). Forcing the actions to a
+     100%-basis second row removes that fragile band entirely and is locale-
+     independent — the search box stays fully readable on row one at every
+     mobile width. */
+  .topbar {
+    gap: 8px;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--topbar-h);
+    padding-top: 8px;
+    padding-bottom: 8px;
+    row-gap: 8px;
+  }
+  .searchbar { min-width: 0; }
+  /* Let the input itself shrink too (its default intrinsic width would otherwise
+     keep the searchbar from collapsing and could push row one past the viewport). */
+  .searchbar input { min-width: 0; }
+  /* The decorative ⌘K/Enter hint (flex:0 0 auto, white-space:nowrap) would
+     stick out of the now-shrinkable searchbar and nudge the page ~a scrollbar
+     past the viewport; it has no room on a phone, so hide it and let the input
+     keep the space. */
+  .kbd-shortcut { display: none; }
+  .topbar-actions { flex-basis: 100%; flex-wrap: wrap; justify-content: flex-end; }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  text-decoration: none !important;
+}
+.logo-mark {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--rausch);
+  color: white;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: -0.5px;
+  /* v1.78.0 — logo-mark is now an <img> (radar icon); cover-crop into the
+     existing 36px circle so the sidebar layout is unchanged. */
+  object-fit: cover;
+  overflow: hidden;
+}
+.logo-text {
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--hof);
+}
+
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-group {
+  margin: 14px 12px 4px;
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foggy);
+}
+.nav-group:first-of-type { margin-top: 18px; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  /* WCAG 2.5.5 (v1.20.0): bumped padding so the click box stays ≥ 44 px
+     even with the smallest font-size override. Previous 10px+14px landed
+     around 40 px; nudging to 12px+14px puts it comfortably over. */
+  padding: 12px 14px;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-radius: var(--radius);
+  color: var(--hof);
+  font-weight: 500;
+  font-size: 14.5px;
+  transition: background var(--transition), color var(--transition);
+  text-decoration: none !important;
+}
+.nav-item:hover { background: var(--beach); }
+.nav-item.active {
+  background: var(--hof);
+  color: var(--paper);
+}
+.nav-ico {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: .85;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: var(--space-3);
+  border-top: 1px solid var(--slate);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sidebar-footer .version { font-weight: 600; font-size: var(--font-size-md); color: var(--foggy); }
+.sidebar-footer .hint { font-size: var(--font-size-sm); color: var(--foggy); }
+.sidebar-footer .manifesto-link {
+  font-size: var(--font-size-sm);
+  color: var(--foggy);
+  text-decoration: none;
+}
+.sidebar-footer .manifesto-link:hover { color: var(--ink); text-decoration: underline; }
+
+/* ───────────────────────── main ───────────────────────── */
+.main {
+  margin-left: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--paper);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  /* min-height (not a fixed height) so the bar GROWS to fit its content when
+     the action buttons wrap to a second row on a phone — a fixed height let the
+     wrapped row spill out and overlap the page header (v1.208.1). Desktop is
+     unchanged: one row always fits within --topbar-h. */
+  min-height: var(--topbar-h);
+  background: var(--paper);
+  border-bottom: 1px solid var(--slate);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-6);
+  gap: var(--space-5);
+  z-index: var(--z-topbar);
+}
+
+.searchbar {
+  flex: 1;
+  max-width: 540px;
+  background: var(--paper);
+  border: 1px solid var(--slate);
+  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-pill);
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  transition: box-shadow var(--transition), border-color var(--transition);
+}
+.searchbar:focus-within {
+  box-shadow: var(--shadow-md);
+  border-color: var(--hof);
+}
+.searchbar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14.5px;
+}
+/* v1.56.4 — UX-N2: visible platform-aware ⌘K / Ctrl K hint. A flex
+   child at the end of the (flex) .searchbar pill — no wrapper /
+   absolute positioning needed since the input is flex:1. Muted, not
+   interactive, never selected; matches the token vocabulary. */
+.kbd-shortcut {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--foggy);
+  background: var(--bg-subtle, rgba(0, 0, 0, .04));
+  border: 1px solid var(--slate);
+  border-radius: 4px;
+  padding: 3px 6px;
+  pointer-events: none;
+  -webkit-user-select: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.topbar-actions { display: flex; gap: var(--space-3); align-items: center; }
+
+/* ───────────────────────── buttons ───────────────────────── */
+/* .btn sets an author display:, which beats the UA's [hidden]{display:none}
+ * at any specificity — so any button toggled via the hidden attribute
+ * (e.g. the #/scan Stop button) stays visible without this override. */
+.btn[hidden] { display: none; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px 20px;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  transition: background var(--transition), border-color var(--transition), transform var(--transition);
+  white-space: nowrap;
+  /* v1.26.1 (WCAG-2.5.5) — restore the 44 px floor the line-431 comment
+   * still references. The declaration was lost somewhere between v1.18 and
+   * v1.26; live measurement at v1.26.0 showed header buttons rendering at
+   * 39-41 px tall (Doctor, Quick scan, Open Pipeline, 🌐 Scan now, ✨
+   * Auto-pipeline a URL). flex-shrink: 0 prevents parent rows from
+   * squashing the button below its min-height under flex layout. */
+  min-height: 44px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+.btn:active { transform: scale(.98); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.is-loading { opacity: .7; cursor: wait; pointer-events: none; }
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--rausch) 0%, var(--rausch-dark) 100%);
+  color: white;
+}
+/* v1.58.16 — hover-flicker fix. The default background is a linear
+   gradient; pre-fix the :hover replaced it with a solid colour
+   (var(--rausch-dark)). CSS cannot smoothly interpolate a gradient
+   ↔ solid swap, so the 180 ms transition snaps and the gradient
+   briefly resolves to its terminal stop (lighter top-left) — the
+   user perceives a white/pink flicker on every hover edge. Keep the
+   same gradient and darken via `filter` instead; `filter` interpolates
+   cleanly in every browser. transition was already on `.btn`; we add
+   `filter` to it so the dim/un-dim animates symmetrically. */
+.btn { transition: background var(--transition), border-color var(--transition), transform var(--transition), filter var(--transition); }
+.btn-primary:hover { filter: brightness(0.92); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--hof);
+  border: 1px solid var(--slate);
+}
+.btn-ghost:hover { background: var(--beach); border-color: var(--hof); }
+
+.btn-dark {
+  background: var(--hof);
+  color: white;
+}
+.btn-dark:hover { background: #000; }
+
+/* v1.55.4 — UX-6: destructive/stop action. Filled, high-contrast so
+   the Stop button is unmistakable during a multi-minute scan. */
+.btn-danger {
+  background: linear-gradient(135deg, var(--rausch) 0%, var(--rausch-dark) 100%);
+  color: #fff;
+  border: 1px solid var(--rausch-dark);
+  font-weight: 600;
+}
+/* v1.58.16 — same gradient↔solid flicker as .btn-primary; apply the
+   same filter-based dim so .btn-danger doesn't flash on hover either. */
+.btn-danger:hover { filter: brightness(0.92); }
+
+/* v1.55.4 — UX-6: honest "~1–2 min" ETA chip next to #/auto Run.
+   UX-D-J (v1.58.42) — the same chip shape on the other advisor pages
+   (Evaluate / Deep / mode pages). Same styling, different copy
+   (~30s for fast advisors; auto stays at ~1–2 min because it's the
+   only multi-step SSE pipeline). */
+.auto-eta,
+.advisor-eta,
+.eta-hint {
+  font-size: var(--font-size-sm);
+  color: var(--foggy);
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* WCAG 2.5.5 / 2.5.8 — touch target size. Default buttons inherit
+   `min-height: 44px` from .btn. Small buttons relax this for dense
+   table-row controls (Edit / Delete / etc.) but keep min-height ≥ 32 px
+   plus 8 px row spacing so the effective spaced target stays ≥ 44 px. */
+.btn-sm { padding: 6px 12px; font-size: var(--font-size-md); min-height: 32px; }
+.btn-block { width: 100%; }
+
+/* M-4 (v1.58.11) — saved-research / saved-prep card. Pre-fix the
+   inner spans relied on an inline `marginLeft: 8px` between title and
+   date; on some entries that collapsed and produced
+   `software-engineer-generaltoday`. Use a flex container with explicit
+   `gap` so the title↔date space is structural and can't collapse, and
+   tag the date with `<time class="saved-card__date">` semantically. */
+.saved-card {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2, 8px);
+  white-space: nowrap;
+}
+.saved-card__title {
+  font-weight: 500;
+}
+.saved-card__date {
+  color: var(--foggy);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+/* UX-A1 (v1.58.54) — Defensive Deep-brief structure warning. When a
+   saved brief lacks ≥3 of the 6 canonical H2 sections (Company snapshot
+   / Engineering culture / Recent news / Glassdoor / Interview process
+   / Negotiation leverage), the renderer prepends a non-blocking warning
+   card with a link to the docs. Styled as a soft alert so it doesn't
+   look like a hard error. */
+.brief-warning {
+  margin: 0 0 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--warn-bg, #fff7e6);
+  border-left: 3px solid var(--warn-border, #f0a020);
+  color: var(--warn-fg, #663d00);
+  font-size: 0.92em;
+  line-height: 1.5;
+}
+.brief-warning strong { display: block; margin-bottom: 4px; }
+.brief-warning p { margin: 0 0 6px; }
+.brief-warning a { color: inherit; text-decoration: underline; }
+
+/* UX-A3 (v1.58.55) — Dashboard active-provider chip. Pill below the
+   hero CTAs. Soft surface, rounded, inline-flex with icon + label so
+   the user knows whether they're in live-eval mode or manual-prompt
+   fallback without having to visit Health. */
+.dash-chip--provider {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface-elev1, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+.dash-chip--provider[hidden] { display: none; }
+.dash-chip--manual { color: var(--muted, #6b7280); }
+.dash-chip__icon { font-size: 1.05em; }
+
+/* M-8 (v1.58.13) — interactive Apply checklist. The pre-fix view
+   rendered the checklist as a plain <pre> block; users couldn't tick
+   anything. Now each item is a real checkbox+label row, persisted per
+   URL in localStorage. Label is the full row so click target ≥44 px
+   (WCAG 2.5.5), with a gap that survives long lines. */
+.apply-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.apply-checklist > li {
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--slate);
+}
+.apply-checklist > li:last-child { border-bottom: 0; }
+.apply-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2, 8px);
+  cursor: pointer;
+  line-height: 1.5;
+  min-height: 32px;
+}
+.apply-checklist input[type="checkbox"] {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.apply-checklist input[type="checkbox"]:checked + span {
+  text-decoration: line-through;
+  color: var(--foggy);
+}
+.apply-checklist__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 8px);
+  margin-top: 12px;
+}
+
+/* FIX-9 / D-2 (v1.168.0) — WCAG 2.5.8 Target Size (Minimum): a <label> that
+   wraps a checkbox/radio IS the clickable target. Native/18px boxes left the
+   row band ~22px (2px under the 24px floor) on #/scan, #/config, #/evaluate,
+   #/cv-studio. Guarantee ≥24px via min-height only — every such label in the
+   app is already flex/inline-flex (`.flex`, inline-flex, etc.), so this only
+   grows the band when it's below 24px and shifts nothing; a plain inline label
+   would ignore min-height and keep its prior size. `.apply-checklist` rows are
+   already 32px and unaffected. */
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  min-height: 24px;
+  align-items: center;
+}
+
+/* ───────────────────────── content shell ───────────────────────── */
+.content {
+  padding: var(--space-7) var(--space-6);
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: var(--space-6);
+  gap: var(--space-4);
+}
+/* U-2 (v1.58.22) — header with a decorative leading emoji (e.g. ✨ on
+   #/auto). Switch to grid so the icon sits on its own column and the
+   <h1>/<p> pair flows in the remaining track without the emoji
+   participating in line-wrap. At narrow widths the H1 still wraps;
+   the icon never breaks to a new line ahead of the title. */
+.page-header--icon {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--space-3, .75rem);
+  align-items: baseline;
+}
+.page-header--icon > .page-subtitle { grid-column: 2 / -1; }
+.page-icon {
+  font-size: 1.5em;
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  margin: 0;
+  /* A long unbreakable token in a title/subtitle (e.g. the resolved project
+     PATH shown on #/config) must wrap instead of overflowing the header — and
+     the page — sideways on a phone. */
+  overflow-wrap: anywhere;
+}
+.page-subtitle {
+  color: var(--foggy);
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-size-base);
+  overflow-wrap: anywhere;
+}
+.page-header h1 + p { overflow-wrap: anywhere; }
+/* U-14 (v1.58.33) — safety-net rule for any page that uses raw <h1>+<p>
+   without the .page-subtitle class. Mirrors the canonical spacing so
+   future page-header authors don't have to remember the class name. */
+.page-header h1 + p { margin-block-start: var(--space-2); color: var(--foggy); }
+

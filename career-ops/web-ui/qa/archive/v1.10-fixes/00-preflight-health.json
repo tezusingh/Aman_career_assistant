@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-05-08T20:01:00Z",
+  "stand": "http://127.0.0.1:4317/",
+  "version": "1.10.0",
+  "parentVersion": "1.7.0",
+  "ok": true,
+  "warnings": 3,
+  "required_all_green": true,
+  "anthropic_key": "set",
+  "gemini_key": "unset (manual mode for scenario 7)",
+  "hh_user_agent": "unset (scenario 11 manual)",
+  "playwright": "installed (scenario 6 should run)",
+  "profile_customized": false,
+  "note_profile_customized": "Will become true after Scenario 3"
+}
